@@ -1,0 +1,273 @@
+\subsection{Historique}
+
+\indent Cette attaque a été découverte par \textit{Lars Knudsen} et \textit{David Wagner} en 2002 \cite{integralcryptanalysis}, et porte sur une version simplifiée de l'AES, une version à 4 tours. Cette attaque existe pour les versions allant jusqu'à 7 tours. Dans le cadre de ce projet, nous présentons l'attaque sur la version 4 tours. \\
+\indent Comme dit dans l'introduction, le but de cette attaque est de retrouver la clé de chiffrement qui a été utilisée pour chiffrer un ensemble de messages clairs. Il s'agit d'une attaque à clair choisi car l'attaquant doit être en mesure de chiffrer les messages qu'il souhaite afin de mener à bien son attaque. 
+Nous allons voir, dans les sections qui suivent, comment l'attaquant va choisir ses messages clairs, et comment il va se servir des couples clairs-chiffrés obtenus pour mener l'attaque.
+
+\subsection{Description des propriétés}
+
+\indent Dans un premier temps, rappelons qu'un message est représenté sous la forme d'une matrice de $4 \times 4$ octets, soit $16$ octets. Pour mener son attaque, l'attaquant va choisir plusieurs clairs et nous nous intéressons aux 16 octets de chacune de ces matrices. Voici la notation que nous allons utiliser : \\
+$$
+\begin{array}{c}
+    \mathcal{M}_{j}^{i} = \text{Octet } j \text{ de la matrice } i. \\
+    i \in \mathbb{N}^{*} \text{ et } 1 \leq j \leq 16
+\end{array}
+$$
+
+\indent L'attaquant va choisir $256$ clairs afin de retrouver certaines propriétés que nous décrirons dans les lignes qui suivent, donc $1 \leq i \leq 256$. Ces propriétés nous permettront plus tard de distinguer les octets de la dernière sous-clé. Ainsi, nous pourrons utiliser l'algorithme de cadencement de clé inverse afin de retrouver la clé maître. \\
+Nous allons maintenant présenter les différentes propriétés des octets qui servirons lors de l'attaque :
+\begin{itemize}
+    \item $\mathcal{C}$ : L'octet $j$ d'une matrice est noté $\mathcal{C}$ lorsque $\mathcal{M}_{j}^{i} = c$, $\forall i \in \{ 1, 2, ... , 256 \}$ et $c$ étant une constante.
+    \item $\mathcal{A}$ : L'octet $j$ d'une matrice est noté $\mathcal{A}$ lorsque $\mathcal{M}_{j}^{1} \neq \mathcal{M}_{j}^{2} \neq ... \neq \mathcal{M}_{j}^{256}$, tous les octets $j$ ont une valeur différente. Cette propriété implique le résultat suivant : \\
+    $$
+    \bigoplus_{i=1}^{256} \mathcal{M}_{j}^{i} = 0
+    $$
+    \item $\mathcal{S}$ : L'octet $j$ d'une matrice est noté $\mathcal{S}$ lorsque la somme de tous les octets $j$ est prévisible, cette somme vaut 0 en général.
+    \item ? :  L'octet $j$ d'une matrice est noté ? si aucune information n'est connue à son propos.
+\end{itemize}
+
+\indent Maintenant que nous connaissons ces propriétés, l'attaquant va pouvoir créer son \textbf{distingueur intégral}. Dans ce contexte, l'intégral de l'octet $j$ est $\bigoplus_{i=1}^{256} \mathcal{M}_{j}^{i}$.
+
+\subsection{Le distingueur}
+
+\subsubsection{Qu'est-ce-qu'un distingueur et une attaque de ce type ?}
+Une attaque utilisant un distingueur permet à un attaquant de différencier des données chiffrées aléatoires (chiffrés reçus et/ou interceptés) et des données chiffrées de clairs connus.
+
+\subsubsection{Tour 1}
+
+\indent Présentons le distingueur au fur et à mesure des tours. Dans un premier temps, l'attaquant choisi ses $256$ clairs comme ceci : \\
+$$
+\begin{array}{|c|c|c|c|}
+    \hline
+    \mathcal{A} & \mathcal{C} & \mathcal{C} & \mathcal{C} \\
+    \hline
+    \mathcal{C} & \mathcal{C} & \mathcal{C} & \mathcal{C} \\
+    \hline
+    \mathcal{C} & \mathcal{C} & \mathcal{C} & \mathcal{C} \\
+    \hline
+    \mathcal{C} & \mathcal{C} & \mathcal{C} & \mathcal{C} \\
+    \hline
+\end{array}
+$$
+
+\indent Cette représentation signifie que la valeur du premier octet n'est jamais la même pour les $256$ matrices. \\
+Les fonctions $SubBytes$ puis $ShiftRows$ s'exécutent sur toutes les matrices et on obtient le distingueur suivant : \\
+$$
+\begin{array}{|c|c|c|c|}
+    \hline
+    \mathcal{A} & \mathcal{C} & \mathcal{C} & \mathcal{C} \\
+    \hline
+    \mathcal{C} & \mathcal{C} & \mathcal{C} & \mathcal{C} \\
+    \hline
+    \mathcal{C} & \mathcal{C} & \mathcal{C} & \mathcal{C} \\
+    \hline
+    \mathcal{C} & \mathcal{C} & \mathcal{C} & \mathcal{C} \\
+    \hline
+\end{array}
+$$
+
+\indent Les propriétés restent inchangées. En effet, $SubBytes$ est une fonction de substitution qui, à un octet, associe un autre octet. Il s'agit en réalité d'une bijection car chaque octet est le résultat de la substitution d'un seul et unique octet. Il en découle que les octets $1$ des $256$ états restent tous différents, et les autres octets restent tous égaux, mais à une nouvelle constante. \\
+\indent La fonction $ShiftRows$, quant à elle, ne fait que déplacer les octets de chaque lignes comme vu plus haut dans ce document. La première ligne n'étant pas affectée par cette fonction, le distingueur reste inchangé.
+
+\vspace{0.5 cm}
+
+\indent Vient ensuite la fonction $MixColumns$, qui est la première à changer le distingueur : \\
+$$
+\begin{array}{|c|c|c|c|}
+    \hline
+    \mathcal{A} & \mathcal{C} & \mathcal{C} & \mathcal{C} \\
+    \hline
+    \mathcal{A} & \mathcal{C} & \mathcal{C} & \mathcal{C} \\
+    \hline
+    \mathcal{A} & \mathcal{C} & \mathcal{C} & \mathcal{C} \\
+    \hline
+    \mathcal{A} & \mathcal{C} & \mathcal{C} & \mathcal{C} \\
+    \hline
+\end{array}
+$$
+
+\indent La fonction $MixColumns$ a été expliquée plus haut dans ce document, mais revenons un peu dessus. Notons $A$ la matrice de $MixColumns$ spécifiée par l'AES, $B$ la première colonne du distingueur, et $C$ la colonne telle que $C = A \times B$ : \\
+$$
+\left \{
+    \begin{array}{c c c c c c c c c}
+        C_0 & = & 2 \bullet B_0 & \oplus & 3 \bullet B_1 & \oplus & 1 \bullet B_2 & \oplus & 1 \bullet B_3  \\
+        C_1 & = & 1 \bullet B_0 & \oplus & 2 \bullet B_1 & \oplus & 3 \bullet B_2 & \oplus & 1 \bullet B_3  \\
+        C_2 & = & 1 \bullet B_0 & \oplus & 1 \bullet B_1 & \oplus & 2 \bullet B_2 & \oplus & 3 \bullet B_3  \\
+        C_3 & = & 3 \bullet B_0 & \oplus & 1 \bullet B_1 & \oplus & 1 \bullet B_2 & \oplus & 2 \bullet B_3 
+    \end{array}
+\right .
+$$
+
+\indent Cependant, avant la fonction $MixColumns$, la colonne avait les propriétés $(\mathcal{A}, \mathcal{C}, \mathcal{C}, \mathcal{C})$. \\ 
+Donc les octets numéro 1 de la colonne sont les mêmes pour tous les états, il en va de même pour les 2 autres octets. On a donc, quelque soit l'état : \\
+$$
+\left \{
+    \begin{array}{c c c c c c c}
+        3 \bullet B_1 & \oplus & 1 \bullet B_2 & \oplus & 1 \bullet B_3 & = & c_0 \\
+        2 \bullet B_1 & \oplus & 3 \bullet B_2 & \oplus & 1 \bullet B_3 & = & c_1 \\
+        1 \bullet B_1 & \oplus & 2 \bullet B_2 & \oplus & 3 \bullet B_3 & = & c_2 \\
+        1 \bullet B_1 & \oplus & 1 \bullet B_2 & \oplus & 2 \bullet B_3 & = & c_3
+    \end{array}
+\right .
+$$
+
+\indent Avec $c_0$, $c_1$, $c_2$ et $c_3$ des constantes. On a donc :
+
+$$
+\left \{
+    \begin{array}{c c c c c}
+        C_0 & = & 2 \bullet B_0 & \oplus & c_0 \\
+        C_1 & = & 1 \bullet B_0 & \oplus & c_1 \\
+        C_2 & = & 1 \bullet B_0 & \oplus & c_2 \\
+        C_3 & = & 3 \bullet B_0 & \oplus & c_3
+    \end{array}
+\right .
+$$
+
+\indent Le $B_0$ de toutes les matrices sont différents, comme explicité par la propriété $\mathcal{A}$. Donc tous les $C_i,\ i \in \{0,1,2,3\}$ sont différents. La preuve : \\
+\indent $C_i$ est de la forme $a \bullet B_0 \oplus b$, avec $a$ et $b$ des constantes. Ce sont des fonctions affines, l'octet $C_i$ est égal à celui d'une autre matrice si et seulement si les deux octets $B_0$ sont égaux. Or, ils ne le sont pas, d'où le fait que l'on obtienne une colonne avec les propriétés $(\mathcal{A}, \mathcal{A}, \mathcal{A}, \mathcal{A})$. Le même raisonnement explique pourquoi une colonne aux propriétés $(\mathcal{C}, \mathcal{C}, \mathcal{C}, \mathcal{C})$ reste comme ceci. \\
+
+\vspace{0.5 cm}
+
+\indent Ensuite, nous avons la fonction $AddRoundKey$, qui ne change pas les propriétés du distingueur. Cette fonction XOR le $i^{eme}$ octet de toutes les matrices avec le $i^{eme}$ octet de la sous-clé correspondant au tour, nous pouvons représenter son action sur un octet comme une transformation linéaire : 
+$$
+\begin{array}{c c c c}    
+    f : & \{0,1\}^{256} \times \{0,1\}^{256} & \longrightarrow & \{0,1\}^{256} \\
+        & (x, OctetCle) & \longmapsto & x \oplus OctetCle
+\end{array}
+$$
+
+\indent Si tous les octets sont différents (propriété $\mathcal{A}$), alors ils le resteront. Si tous les octets sont égaux (propriété $\mathcal{C}$), ils le resteront, mais seront égaux à une nouvelle constante. \\
+
+% \vspace{0.5 cm}
+
+\subsubsection{Tour 2}
+
+\indent Vient ensuite le second tour. $SubBytes$ ne change pas les propriétés pour la même raison qu'au tour $1$, tandis que $ShiftRows$ va déplacer les propriétés d'un simple décalage par ligne, comme ceci : \\
+$$
+\begin{array}{|c|c|c|c|}
+    \hline
+    \mathcal{A} & \mathcal{C} & \mathcal{C} & \mathcal{C} \\
+    \hline
+    \mathcal{C} & \mathcal{C} & \mathcal{C} & \mathcal{A} \\
+    \hline
+    \mathcal{C} & \mathcal{C} & \mathcal{A} & \mathcal{C} \\
+    \hline
+    \mathcal{C} & \mathcal{A} & \mathcal{C} & \mathcal{C} \\
+    \hline
+\end{array}
+$$
+
+\indent Le $MixColumns$ du second tour transforme la matrice de telle sorte que les 16 octets respectent la propriété $\mathcal{A}$. Comme expliqué pour le tour $1$, si une colonne comporte exactement une occurrence de la propriété $\mathcal{A}$, alors toute la colonne respectera cette propriété après le $MixColumns$. Comme nous pouvons le remarquer, les 4 colonnes possèdent exactement une occurrence de la propriété $\mathcal{A}$, ce qui nous donne :  \\
+$$
+\begin{array}{|c|c|c|c|}
+    \hline
+    \mathcal{A} & \mathcal{A} & \mathcal{A} & \mathcal{A} \\
+    \hline
+    \mathcal{A} & \mathcal{A} & \mathcal{A} & \mathcal{A} \\
+    \hline
+    \mathcal{A} & \mathcal{A} & \mathcal{A} & \mathcal{A} \\
+    \hline
+    \mathcal{A} & \mathcal{A} & \mathcal{A} & \mathcal{A} \\
+    \hline
+\end{array}
+$$
+
+\indent Une fois de plus, la fonction $AddRoundKey$ ne change aucune propriété.
+
+% \vspace{0.5 cm}
+
+\subsubsection{Tour 3}
+
+\indent Lors du troisième tour comme pour les précédents, la fonction $SubBytes$ ne change pas les propriétés. $ShiftRows$ effectue les rotations de lignes, mais comme tous les octets ont la propriété $\mathcal{A}$, cette fonction ne change rien au distingueur. Les 16 octets du distingueur gardent donc la propriété $\mathcal{A}$. Suite à cela, la fonction $MixColumns$ s'opère, et va changer la propriété des 16 octets car en effet, toutes les colonnes possèdent les propriétés $(\mathcal{A}, \mathcal{A}, \mathcal{A}, \mathcal{A})$. Le résultat est le suivant : 
+$$
+\begin{array}{|c|c|c|c|}
+    \hline
+    \mathcal{S} & \mathcal{S} & \mathcal{S} & \mathcal{S} \\
+    \hline
+    \mathcal{S} & \mathcal{S} & \mathcal{S} & \mathcal{S} \\
+    \hline
+    \mathcal{S} & \mathcal{S} & \mathcal{S} & \mathcal{S} \\
+    \hline
+    \mathcal{S} & \mathcal{S} & \mathcal{S} & \mathcal{S} \\
+    \hline
+\end{array}
+$$
+
+\indent Ici, $\mathcal{S} = 0$. Expliquons cette transformation. Nous avons toujours ce système, qui représente la transformation d'une colonne :
+$$
+\left \{
+    \begin{array}{c c c c c c c c c}
+        C_0 & = & 2 \bullet B_0 & \oplus & 3 \bullet B_1 & \oplus & 1 \bullet B_2 & \oplus & 1 \bullet B_3  \\
+        C_1 & = & 1 \bullet B_0 & \oplus & 2 \bullet B_1 & \oplus & 3 \bullet B_2 & \oplus & 1 \bullet B_3  \\
+        C_2 & = & 1 \bullet B_0 & \oplus & 1 \bullet B_1 & \oplus & 2 \bullet B_2 & \oplus & 3 \bullet B_3  \\
+        C_3 & = & 3 \bullet B_0 & \oplus & 1 \bullet B_1 & \oplus & 1 \bullet B_2 & \oplus & 2 \bullet B_3 
+    \end{array}
+\right .
+$$
+
+\indent Sauf qu'ici, nous ne pouvons pas appliquer le même raisonnement que pour les deux tours précédents. Cependant, nous avons $\bigoplus_{i=1}^{256} C_{j}^{i} = 0,\ j=0,1,2,3$ \\
+\indent Ceci s'explique mathématiquement : 
+$$
+\begin{array}{c c c c c c c c c c c}
+    \bigoplus_{i=1}^{256}\ C_{j}^{i} & = & \bigoplus_{i=1}^{256} & (2 B_{0}^{i} & \oplus & 3 B_{1}^{i} & \oplus & B_{2}^{i} & \oplus & B_{3}^{i}) & \\
+    & & & & & & & & & & \\
+                                    & = & (2 B_{0}^{1} & \oplus & 2 B_{0}^{2} & \oplus & ... & \oplus & 2 B_{0}^{256}) & \oplus & (*) \\
+                                    & & (3 B_{1}^{1} & \oplus & 3 B_{1}^{2} & \oplus & ... & \oplus & 3 B_{1}^{256}) & \oplus & \\
+                                    & & (B_{2}^{1} & \oplus & B_{2}^{2} & \oplus & ... & \oplus & B_{2}^{256}) & \oplus & \\
+                                    & & (B_{2}^{1} & \oplus & B_{2}^{2} & \oplus & ... & \oplus & B_{2}^{256}) & & \\
+    & & & & & & & & & & \\
+                                    & = & 2 \bullet (B_{0}^{1} & \oplus & B_{0}^{2} & \oplus & ... & \oplus & B_{0}^{256}) & \oplus & (**) \\
+                                    & & 3 \bullet (B_{1}^{1} & \oplus & B_{1}^{2} & \oplus & ... & \oplus & B_{1}^{256}) & \oplus & \\
+                                    & & 1 \bullet (B_{2}^{1} & \oplus & B_{2}^{2} & \oplus & ... & \oplus & B_{2}^{256}) & \oplus & \\
+                                    & & 1 \bullet (B_{2}^{1} & \oplus & B_{2}^{2} & \oplus & ... & \oplus & B_{2}^{256}) & &
+\end{array}
+$$
+
+\indent {\footnotesize (*) : Associativité et commutativité du XOR.} \\
+\indent {\footnotesize (**) : Factorisation.} \\
+\noindent Or, on sait que $B_0$, $B_1$, $B_2$ et $B_3$ ont la propriété $\mathcal{A}$, donc :
+$$
+(B_{j}^{1} \oplus B_{j}^{2} \oplus ... \oplus B_{j}^{256}) = 0,\ j=0,1,2,3
+$$
+
+\indent Le calcul devient donc : 
+$$
+\bigoplus_{i=1}^{256}\ C_{j}^{i} = 2 \bullet 0 \oplus 3 \bullet 0 \oplus 1 \bullet 0 \oplus 1 \bullet 0 = 0
+$$
+
+\indent Ceci nous explique les propriétés $\mathcal{S}$, le résultat prévisible dans notre cas, qui est \textbf{zéro} \\
+Comme pour les tours précédents, $AddRoundKey$ ne change aucune propriété.
+
+% \vspace{0.5 cm}
+
+\subsubsection{Tour 4}
+
+\indent Le quatrième tour se fait sans la fonction $MixColumns$, et la fonction $SubBytes$ casse les propriétés que nous avions jusqu'ici. En effet, il devient impossible, après la substitution, de prédire le résultat de l'intégral. On obtient le distingueur suivant :
+$$
+\begin{array}{|c|c|c|c|}
+    \hline
+    ? & ? & ? & ? \\
+    \hline
+    ? & ? & ? & ? \\
+    \hline
+    ? & ? & ? & ? \\
+    \hline
+    ? & ? & ? & ? \\
+    \hline
+\end{array}
+$$
+
+\subsection{Retrouver la clé de chiffrement}
+
+\indent Afin de retrouver la clé de chiffrement utilisée pour les $256$ messages clairs, l'attaquant doit remonter partiellement les étapes de chiffrement. Il peut retrouver la valeur de la dernière sous-clé octet par octet. Concentrons-nous d'abord sur le premier octet de la dernière sous-clé, notons cet octet $\oslash_0$ . L'attaquant va tester les $256$ valeurs possibles de $\oslash_0$, et remonter le calcul avec chacune de ces valeurs : pour un test, il XOR le premier octet des chiffrés avec la valeur test de $\oslash_0$, ce qui donne un nouvel octet, que nous notons $\oslash_1$. Il effectue cette opération avec les $256$ chiffrés ($C_0, C_1, ... , C_{255}$). \\
+\indent Pour chaque nouvel octet, il effectue la fonction $ShiftRows^{-1}$ puis $SubBytes^{-1}$. L'attaquant obtient alors $256$ nouveaux octets, et si le XOR de ces $256$ octets donne $0$, alors il ajoute cette valeur test $\oslash_0$ dans la liste des octets candidats de la sous-clé (liste concernant le premier octet car nous nous sommes concentré dessus), car la propriété $\mathcal{S}$ du distingueur à la fin du troisième tour est respectée. Il répète l'ensemble de ces opérations pour les 15 autres octets de la sous-clé, afin d'obtenir une liste de candidat concernant tous les octets. \\
+\indent Voyons maintenant la complexité de ces opérations : $2^8$ valeurs test pour chaque octet et il y a au total $2^4$ octets (matrice $4 \times 4$) pour $2^8$ chiffrés (l'attaquant dispose de $256$ couples clair-chiffré). $2^8 \times 2^4 \times 2^8 = 2^{20}$. \\
+% \TODO{Donner la complexité de ce qui est décrit ci-dessous} \\
+\indent Au bout de ces calculs, l'attaquant dispose d'une petite liste de valeurs possibles, pour chacun des $16$ octets de la sous-clé, donc $16$ listes. Une possibilité serait de tester récursivement toutes les combinaisons possibles de ces valeurs candidates (chaque octet de la première liste, avec chaque octet de la second liste, ...). Pour chaque sous-clé à tester, l'attaquant effectue l'inverse du $KeySchedule$ afin de trouver la clé maître correspondante, puis chiffre les $256$ clairs dont il dispose. Si tous les chiffrés correspondent aux clairs comme indiqué par les couples, alors cette clé maître est la bonne, et l'attaque est réussie. Sinon, il passe au test suivant. \\
+\indent Une autre solution serait de créer $256$ autres couples clair-chiffré avec des constantes différentes (au niveau des propriétés $\mathcal{C}$), et d'effectuer l'intersection des $16$ listes du premier ensemble de couples avec les $16$ du deuxième ensemble de couples. Ceci permet d'obtenir une seule valeur possible de la dernière sous-clé, l'attaquant n'a alors plus qu'à inverser le $KeySchedule$ pour retrouver la clé maître. \\
+\indent Nous utilisons trois ensembles de 256 couples clair-chiffré afin de rendre l'intercetion efficace. Cela signifie que nous devons effectuer à trois reprises les opérations consistant à déterminer les listes d'octets candidats. Voici la compléxité de cette solution : $3 \times 2^{20} \approx 2^{21.58}$ pour les listes, ce qui reste trivial pour les ordinateurs modernes. L'intercetion des listes est un algorithme en temps linéaire, négligeable.
+
+\subsection{Statistiques de l'attaque}
+
+\indent Lors de l'attaque, nous créons des listes d'octets potentiels. Lorsque l'on lance le programme avec différentes clés et que nous faisons la moyenne du nombre d'octets potentiels de chaque liste, nous obtenons des résultats très proches de 2. Il y a donc en moyenne deux candidats pour chacun des 16 octets de la dernière sous-clé. Nous pouvons maintenant approcher la complexité de l'attaque utilisant la récursivité : $\underbrace{2 \times 2 \times ... \times 2}_{\text{16 fois}} = 2^{16}$ sous-clés à tester en moyenne.

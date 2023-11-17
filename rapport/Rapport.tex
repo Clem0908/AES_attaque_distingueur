@@ -1,0 +1,77 @@
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage{indentfirst}
+\usepackage{xcolor}
+\usepackage{sectsty}
+\usepackage{stmaryrd}
+\usepackage{algorithm, algpseudocode}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{geometry}
+    \geometry{
+        left=2.5cm,
+        right=2.5cm,
+        top=2.5cm,
+        bottom=3cm
+    }
+
+\usepackage{graphicx}
+\graphicspath{ {images/} }
+
+\sectionfont{\color{teal}}
+\newcommand\TODO[1]{\textcolor{red}{#1}}
+
+\renewcommand*\contentsname{Table Des Matières}
+
+\begin{document}
+
+    \thispagestyle{empty}
+    \input{Page_de_garde.tex}
+
+    \newpage
+    
+    \thispagestyle{empty}
+    \tableofcontents
+
+    \newpage
+
+    \setcounter{page}{1}
+    \section{Introduction}
+    \input{Introduction.tex}
+
+    \vspace{1 cm}
+
+    \section{Structure de l'AES-128 10 tours}
+    \input{Structure.tex}
+
+    \vspace{1 cm}
+
+    \section{L'attaque par saturation}
+    \input{Attaque.tex}
+
+    \vspace{1 cm}
+
+	\section{Choix d'implémentation - Code}
+	\input{Implementation.tex}
+	
+	\newpage
+
+    \thispagestyle{empty}
+    \section{Sources}
+    \begin{itemize}
+        \item Fonctionnement de l'AES : \url{https://www.youtube.com/watch?v=lnKPoWZnNNM}
+        \item Implémentation de l'AES :
+        \url{https://www.davidwong.fr/blockbreakers/aes.html}
+        \item MixColumns :
+        \url{https://en.wikipedia.org/wiki/Rijndael_MixColumns}
+        \item S-box :
+        \url{https://en.wikipedia.org/wiki/Rijndael_S-box}
+    \end{itemize}
+
+    \vspace{0.5 cm}
+
+	\begin{thebibliography}{1}
+		\bibitem{integralcryptanalysis}
+		Lars Knudsen, David Wagner (2002) \textit{Integral Cryptanalysis}, p. 112-117.
+	\end{thebibliography}
+\end{document}

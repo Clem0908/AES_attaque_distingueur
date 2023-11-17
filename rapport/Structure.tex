@@ -1,0 +1,473 @@
+\subsection{Algorithme principal}
+
+Dans un premier temps, présentons l'algorithme principal de l'AES-128 à 10 tours : \\
+
+\begin{algorithm}
+    \caption{AES 10 rounds}\label{algorithme AES}
+    \begin{algorithmic}
+    \Require K (clé, 128 bits), M (clair, 128 bits)
+    \Ensure $C = AES_K(M)$ \Comment{C est le chiffré}
+    \State $SubKeys[11] \gets KeySchedule(K)$ \Comment{Cadencement de clé $\rightarrow$ 11 sous-clés}
+    \State $S \gets M$
+    \State $S \gets S \oplus AddRoundKey[0]$
+    \For{$i \gets 1\ to\ 10$} \Comment{AES à 10 tours}
+        \State $S \gets SubBytes(S)$
+        \State $S \gets ShiftRows(S)$
+        \If{$i \leq 9$}
+            \State $S \gets MixColumn(S)$
+        \EndIf
+        \State $S \gets S \oplus AddRoundKey[i]$
+    \EndFor
+    \State $C \gets S$
+    \State \Return $C$
+
+    % \While{$N \neq 0$}
+    % \If{$N$ is even}
+    %     \State $X \gets X \times X$
+    %     \State $N \gets \frac{N}{2}$
+    % \ElsIf{$N$ is odd}
+    %     \State $y \gets y \times X$
+    %     \State $N \gets N - 1$
+    % \EndIf
+    % \EndWhile
+    \end{algorithmic}
+\end{algorithm}
+
+\def\TABgen#1{
+  \begin{array}{|c|c|c|c|} \hline
+  #1_{0,0} & #1_{0,1} & #1_{0,2} & #1_{0,3} \\ \hline
+  #1_{1,0} & #1_{1,1} & #1_{1,2} & #1_{1,3} \\ \hline
+  #1_{2,0} & #1_{2,1} & #1_{2,2} & #1_{2,3} \\ \hline
+  #1_{3,0} & #1_{3,1} & #1_{3,2} & #1_{3,3} \\ \hline
+  \end{array}
+}
+\def\MATgen#1{
+  \begin{pmatrix}
+  #1_{0,0} & #1_{0,1} & #1_{0,2} & #1_{0,2} \\
+  #1_{1,0} & #1_{1,1} & #1_{1,2} & #1_{1,3} \\
+  #1_{2,0} & #1_{2,1} & #1_{2,2} & #1_{2,3} \\
+  #1_{3,0} & #1_{3,1} & #1_{3,2} & #1_{3,3} 
+  \end{pmatrix}
+}
+
+\def\tabShift#1{
+    \begin{array}{|c|c|c|c|} \hline
+  #1_{0,0} & #1_{0,1} & #1_{0,2} & #1_{0,3} \\ \hline
+  #1_{1,1} & #1_{1,2} & #1_{1,3} & #1_{1,0} \\ \hline
+  #1_{2,2} & #1_{2,3} & #1_{2,0} & #1_{2,1} \\ \hline
+  #1_{3,3} & #1_{3,0} & #1_{3,1} & #1_{3,2} \\ \hline
+  \end{array}
+}
+
+\def\Sbox{
+}
+
+
+Décrivons en détail l'algorithme de chiffrement
+symétrique de l'\emph{Advanced Encryption
+Standard} (\textsc{aes}). Il est composé de 4 fonctions principales, qu'on expliquera un peu plus tard dans cette partie :
+\begin{itemize}
+\item \texttt{SubBytes} ($S$-box),
+\item \texttt{ShiftRows},
+\item \texttt{MixColumns},
+\item \texttt{AddRoundKey}.
+\end{itemize}
+
+L'AES-128 sera représenté sous forme de tableau 4 $\times$4 de 8 bits chaque bloc (1 octet). Il est donc décrit en 16 octets (8 $\times$ 16 = 128).
+
+$$ \TABgen{a} $$
+
+% Chaque octet $(b_7,\dots,b_0)\in \FM{2}^8$ est identifié avec l'élément $\sum_{i=0}^7 b_i \alpha^i \in \FM_{256}$.
+
+Un algorithme de \emph{cadencement de clé} est calculé à  partir de la clé $K$. Cette clé est également de 128 bits et aussi représentée comme un tableau de 4 $\times$ 4. Cet algorithme produit 4 clés pour les 4 tours (10 pour l'AES à 10 tours).
+
+Le message à chiffrer est mis sous la forme d'un tableau 4 $\times$ 4 comme expliqué ci-dessus, par 16 blocs de 1 octet chacun. L'AES applique successivement sur ce tableau les opérations citées précédemment. 
+
+\subsection{AddRoundKey}
+L'opération $AddRoundKey$ s'effectue par bloc, un bloc du message avec un bloc de la clé qui lui correspond.
+
+$$ \TABgen{a} \oplus  \TABgen{k} = \TABgen{a \oplus k} $$
+
+On effectue un XOR $\oplus$ bit à bit du message avec la clé.
+Pour chaque tour, on utilise une clé différente, obtenue par le cadencement de clé, expliqué plus tard.
+
+\subsection{SubBytes}
+L'opération $SubBytes$ est la partie substitution. Chaque octet est substitué par un octet différent. 
+
+Dans cette partie, on va s'intéresser à comment est représenté un octet et comment se passe les opérations addition $(+)$ et multiplication $(\times)$ entre octet.
+
+\subsubsection{Qu'est ce qu'un octet ?}
+Un octet est composé de 8 bits. Un bit n'a que 2 valeurs possibles : "0" ou "1". Un octet peut donc avoir 256 valeurs possibles ($2^8$), allant de $00000000$ pour représenter 0 à $11111111$ pour représenter 255. 
+
+Pour traduire un octet en polynôme, on peut voir chaque chiffre comme un index. 
+Donc un octet $A$ ayant pour valeur possible de $\llbracket 0, 255 \rrbracket$ tel que $A = (a_7,a_6,a_5,a_4,a_3,a_2,a_1,a_0)\in\{0,1\}^8$ est représenté par un polynôme de degré $\leq$ 7 tel que $A(x) = \sum_{i=0}^7 a_i x^i$ avec $a_i\in \{0,1\}$. \\
+
+\noindent \underline{Exemple} : Pour l'octet 137, 137 = 128 + 8 + 1. \\
+Il est composé de 128 $(=2^7)$, de 8 $(=2^3)$ et de 1 $(=2^0)$. \\ 
+Donc l'octet 137 est représenté 10001001 $\leftrightarrow (X^7 + X^3 + X^0)$.
+
+\subsubsection{L'addition}
+Pour l'addition, c'est équivalent à un XOR, c'est à dire à une addition mod 2, une addition dans $Z/_2Z$.
+
+\noindent \underline{Exemple} : On a 137 et 92. On veut faire la somme de ces octets. On procède d'abord à leur conversion. On a donc : $137 \leftrightarrow 10001001$ et $92 \leftrightarrow 01011100$.
+
+$$
+\begin{array}{c c c c}
+    & 10001001 & \leftrightarrow & 137 \\
+    \oplus & 01011100 & \leftrightarrow & 92 \\
+    \hline 
+    & 11010101 & \leftrightarrow & 213\\
+\end{array}
+$$
+On obtient 11010101 qui est égal à 213.
+
+Si on utilise la notation expliquée plus haut, on a 
+$137 \leftrightarrow (X^7 + X^3 + 1)$ et
+$92 \leftrightarrow (X^6 + X^4 + X^3 + X^2)$.\\
+
+En faisant la somme de ces 2 polynômes, on obtient : 
+$$
+\begin{array}{c c l}
+    (X^7 + X^3 + 1) + (X^6 + X^4 + X^3 + X^2) & = & (X^7 + X^6 + X^4 + X^3 + X^3 + X^2 + 1) \\
+                                            & = & (X^7 + X^6 + X^4 + X^2 + 1) \\
+                                            & = & 11010101 \leftrightarrow 213.
+\end{array}
+$$
+
+On obtient bien le même résultat qu'avec le XOR.
+
+\subsubsection{La multiplication}
+On a deux octets $a$ et $b$, tous deux représentés comme des polynômes de degré $\leq$ 7 (le polynôme $A(X)$ pour l'octet $a$ et le polynôme $B(X)$ pour l'octet $b$).
+
+La multiplication est faite de cette manière :
+\begin{equation} A(X) \times B(X) \text{ mod } I(X) \end{equation}
+avec le
+polynôme irréductible $I(X) = X^8+X^4+X^3+X+1$; 
+
+% Exemple : Faisons la multiplication de $137 \leftrightarrow (X^7 + X^3 + 1)$ et de
+% $92 \leftrightarrow (X^6 + X^4 + X^3 + X^2)$.\\
+% On obtient : 
+% \begin{align}
+% (X^7 + X^3 + 1) \times (X^6 + X^4 + X^3 + X^2) \\
+% &= (X^{13} + X^{11} + X^{10} + X^9 + X^9 + X^7 + X^6 + X^5 + X^6 + X^4 + X^3 + X^2) \\
+% &= (X^{13} + X^{11} + X^{10} + X^7 + X^5 + X^4 + X^3 + X^2) \\
+% \end{align}
+
+% \textcolor{red}{Mettre un exemple ?}
+
+\subsubsection{La transformation SubBytes}
+
+{$SubBytes$} opère indépendamment sur chacun des 16
+octets en utilisant la table de substitution ($S$-box). Elle est définie de la façon suivante :
+\begin{align*}
+\begin{array}{c c c c}
+    S : & \{0,1\}^{256} & \longrightarrow & \{0,1\}^{256} \\
+    & a & \longmapsto &
+  \begin{cases}
+     a^{-1} & \text{si $a\neq 0$},\\
+     0 & \text{si $a = 0$},\\
+   \end{cases}
+\end{array}
+\end{align*}
+
+Pour obtenir $SubBytes(a)$, on calcule :
+$$ SubBytes(a) = A \times a \oplus B$$
+où $A$ est une matrice $8\times 8$ à coefficients dans [0,1] et $B\in (2)^8$:
+
+\def\MatriceSubBytesA{
+\begin{pmatrix}
+1&0&0&0&1&1&1&1\\
+1&1&0&0&0&1&1&1\\
+1&1&1&0&0&0&1&1\\
+1&1&1&1&0&0&0&1\\
+1&1&1&1&1&0&0&0\\
+0&1&1&1&1&1&0&0\\
+0&0&1&1&1&1&1&0\\
+0&0&0&1&1&1&1&1\\
+\end{pmatrix}
+}
+
+\def\MatriceSubBytesB{
+\begin{pmatrix}
+1\\
+1\\
+0\\
+0\\
+0\\
+1\\
+1\\
+0
+\end{pmatrix}
+}
+
+\def\MatriceSingle#1{
+  \begin{pmatrix}
+  #1_{7} \\
+  #1_{6} \\
+  #1_{5} \\
+  #1_{4} \\
+  #1_{3} \\
+  #1_{2} \\
+  #1_{1} \\
+  #1_{0}
+  \end{pmatrix}
+}
+
+$$
+A = \MatriceSubBytesA{}\quad , \quad
+B = \MatriceSubBytesB{} \quad \text{et} \quad  a = \MatriceSingle{a}
+$$
+
+À la place de faire ce calcul pour chaque octet, il suffit d'utiliser la représentation par table de la $S$-box :
+% $$ \Sbox $$ 
+
+$$
+\begin{array}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|} \hline
+& 00 & 01 & 02 & 03 & 04 & 05 & 06 & 07 & 08 & 09 & 0a & 0b & 0c & 0d & 0e & 0f \\ \hline
+00 & 63 & 7c & 77 & 7b & f2 & 6b & 6f & c5 & 30 & 01 & 67 & 2b & fe & d7 & ab & 76 \\ \hline
+10 & ca & 82 & c9 & 7d & fa & 59 & 47 & f0 & ad & d4 & a2 & af & 9c & a4 & 72 & c0 \\ \hline
+20 & b7 & fd & 93 & 26 & 36 & 3f & f7 & cc & 34 & a5 & e5 & f1 & 71 & d8 & 31 & 15 \\ \hline
+30 & 04 & c7 & 23 & c3 & 18 & 96 & 05 & 9a & 07 & 12 & 80 & e2 & eb & 27 & b2 & 75 \\ \hline
+40 & 09 & 83 & 2c & 1a & 1b & 6e & 5a & a0 & 52 & 3b & d6 & b3 & 29 & e3 & 2f & 84 \\ \hline
+50 & 53 & d1 & 00 & ed & 20 & fc & b1 & 5b & 6a & cb & be & 39 & 4a & 4c & 58 & cf \\ \hline
+60 & d0 & ef & aa & fb & 43 & 4d & 33 & 85 & 45 & f9 & 02 & 7f & 50 & 3c & 9f & a8 \\ \hline
+70 & 51 & a3 & 40 & 8f & 92 & 9d & 38 & f5 & bc & b6 & da & 21 & 10 & ff & f3 & d2 \\ \hline
+80 & cd & 0c & 13 & ec & 5f & 97 & 44 & 17 & c4 & a7 & 7e & 3d & 64 & 5d & 19 & 73 \\ \hline
+90 & 60 & 81 & 4f & dc & 22 & 2a & 90 & 88 & 46 & ee & b8 & 14 & de & 5e & 0b & db \\ \hline
+a0 & e0 & 32 & 3a & 0a & 49 & 06 & 24 & 5c & c2 & d3 & ac & 62 & 91 & 95 & e4 & 79 \\ \hline
+b0 & e7 & c8 & 37 & 6d & 8d & d5 & 4e & a9 & 6c & 56 & f4 & ea & 65 & 7a & ae & 08 \\ \hline
+c0 & ba & 78 & 25 & 2e & 1c & a6 & b4 & c6 & e8 & dd & 74 & 1f & 4b & bd & 8b & 8a \\ \hline
+d0 & 70 & 3e & b5 & 66 & 48 & 03 & f6 & 0e & 61 & 35 & 57 & b9 & 86 & c1 & 1d & 9e \\ \hline
+e0 & e1 & f8 & 98 & 11 & 69 & d9 & 8e & 94 & 9b & 1e & 87 & e9 & ce & 55 & 28 & df \\ \hline
+f0 & 8c & a1 & 89 & 0d & bf & e6 & 42 & 68 & 41 & 99 & 2d & 0f & b0 & 54 & bb & 16 \\ \hline
+\end{array}
+$$ \\
+
+Pour avoir la nouvelle valeur de l'octet, il faut regarder la première moitié de l'octet en question, parcourir le tableau verticalement jusqu'à trouver la valeur, puis en regardant la deuxième moitié de l'octet, lire horizontalement et ainsi trouver le nouvel octet. 
+
+\noindent \underline{Exemple} : Résultats de $S$-box de l'octet 58 : $S$-box(58) = 6a. \\
+
+On procède ainsi pour toutes les cases de notre tableau 4 $\times$ 4.
+
+$$ \TABgen{a} \quad \longrightarrow \quad 
+  \begin{array}{|c|c|c|c|} \hline
+  S\text{-box}(a_{0,0}) & S\text{-box}(a_{0,1}) & S\text{-box}(a_{0,2}) & S\text{-box}(a_{0,3}) \\ \hline
+  S\text{-box}(a_{1,0}) & S\text{-box}(a_{1,1}) & S\text{-box}(a_{1,2}) & S\text{-box}(a_{1,3}) \\ \hline
+  S\text{-box}(a_{2,0}) & S\text{-box}(a_{2,1}) & S\text{-box}(a_{2,2}) & S\text{-box}(a_{2,3}) \\ \hline
+  S\text{-box}(a_{3,0}) & S\text{-box}(a_{3,1}) & S\text{-box}(a_{3,2}) & S\text{-box}(a_{3,3}) \\ \hline
+  \end{array}
+$$
+
+Chaque valeur d'octet va être transformée en une autre valeur.
+
+\subsection{ShiftRows}
+
+$ShiftRows$ applique une permutation circulaire vers la gauche aux lignes du tableau, respectivement de 0, 1, 2, 3 cases:
+$$ \TABgen{a} \quad \longrightarrow \quad \tabShift{a} $$
+
+\subsection{MixColumns}
+La transformation $MixColumns$ transforme indépendamment chacune des 4 colonnes de l'état. Elle utilise la matrice ci-dessous pour obtenir la nouvelle colonne. 
+
+
+\def\MixColumn{\begin{pmatrix} 
+  2 & 3 & 1 & 1 \\ 
+  1 & 2 & 3 & 1 \\ 
+  1 & 1 & 2 & 3 \\ 
+  3 & 1 & 1 & 2 \\ 
+  \end{pmatrix}}
+ 
+\def\colonne#1{
+ \begin{pmatrix}
+  #1_{0,i} \\
+  #1_{1,i} \\
+  #1_{2,i} \\
+  #1_{3,i}
+  \end{pmatrix}
+}
+
+$$ \MixColumn $$
+
+Le résultat est le produit matriciel avec une colonne $i$ de notre tableau $4 \times 4$ et la matrice ci-dessus.
+$$ \colonne{a} \times \MixColumn = \colonne{b} \quad \text{ avec } i \in [0,3] \text { représentant la colonne }$$
+On répéte le processus pour chaque colonne (On le fait donc 4 fois).
+
+\def\exemple{
+\begin{pmatrix}
+    \text{F2} \\ 
+    \text{0A} \\ 
+    \text{22} \\ 
+    \text{5C} \\ 
+\end{pmatrix} 
+}
+
+\noindent \underline{Exemple} : Calculons
+% \subsubsection{Exemple} : Calculons 
+$$ MixColumn\exemple$$
+
+Nous avons donc 
+$$ \exemple \times \MixColumn = 
+\begin{pmatrix}
+    b_0 \\ b_1 \\ b_2 \\ b_3
+\end{pmatrix} $$
+
+avec $$ \begin{cases}
+     {\displaystyle b_{0}=2\bullet \text{F2}\oplus 3\bullet \text{0A}\oplus 1\bullet \text{22}\oplus 1\bullet\text{5C}} \\
+{\displaystyle b_{1}=1\bullet \text{F2}\oplus 2\bullet \text{0A}\oplus 3\bullet \text{22}\oplus 1\bullet \text{5C}} \\
+{\displaystyle b_{2}=1\bullet \text{F2}\oplus 2\bullet \text{0A}\oplus 3\bullet \text{22}\oplus 1\bullet \text{5C}}\\
+{\displaystyle b_{3}=1\bullet \text{F2}\oplus 1\bullet \text{0A}\oplus 2\bullet \text{22}\oplus 3\bullet \text{5C}}\\
+   \end{cases}
+$$
+
+Commençons par calculer $b_0$.\\
+
+\noindent Faisons les conversions nécessaires : \\
+L'octet F2 (11110010 en binaire) = $X^7 + X^6 + X^5 + X^4 +X$, sous forme polynôme. \\
+0A (00001010) = $X^3 + X^1$. \\
+22 (00100010) = $X^5 + X$. \\
+5C (01011100) = $X^6 + X^4 +X^3 + X^2 $. \\
+2 (00000010) = $X$ , 3 (00000011) = $X + 1$, 1 (00000001) = $1$. \\
+
+$$
+\begin{array}{c c l}
+    2 \bullet F2 & = & (X) \times (X^7 + X^6 + X^5 + X^4 +X) \\
+                & = & X^8 + X^7 + X^6 + X^5 +X^2 \\
+                & = & X^7 + X^6 + X^5 +X^4 + X^3 + X^2 + X + 1 \\
+                & = & 11111111 \\
+    & & \\
+    3 \bullet 0A & = & (X + 1) \times (X^3 + X^1) \\
+                & = & X^4 + X^2 + X^3 + X^1 \\
+                & = & 00011110 \\
+    & & \\
+    1 \bullet 22 & = & (1) \times (X^5 + X) \\
+                & = & X^5 + X \\
+                & = & 00100010 \\
+    & & \\
+    1 \bullet 22 & = & (1) \times (X^6 + X^4 +X^3 + X^2) \\
+                & = & X^6 + X^4 +X^3 + X^2 \\
+                & = & 01011100
+\end{array}
+$$
+
+On fait un XOR de ce qu'on a obtenu :
+$$
+\begin{array}{c c c }
+           & 11111111  \\
+    \oplus & 00011110 \\
+    \oplus & 00100010  \\
+    \oplus & 01011100 \\
+    \hline 
+    & 10011111 \\
+\end{array}
+$$
+10011111 donne 9F. Donc $b_0$ = 9F.
+
+On procède ainsi pour les octets suivants ("0A", "22" et "5C").
+On obtient donc : 
+
+$$ MixColumn\exemple = 
+\begin{pmatrix}
+    9\text{F} \\ \text{DC} \\ 58  \\ 9\text{D}
+\end{pmatrix}$$
+
+% \newpage
+% \subsection{KeySchedule}
+% \begin{algorithm}
+%     \caption{KeySchedule (ou KeyExpension)}\label{alg:cap}
+%     \begin{algorithmic}
+%     \Require K (clé, 128 bits)
+%     \Ensure $ k_0, k_{1}, k_{2}, k_{3}, k_4 $ \Comment{5 clés pour 4 tours}
+%     \State $k_0 \gets K$ \Comment{La KeyMaster $\rightarrow$ première sous clé}
+%     \For{$i \gets 1\ to\ 4$} \Comment{AES à 4 tours}
+%         \State $tmp \gets RotWord(k_{i-1[[3,0][3,1][3,2][3,3]]}) \text{*}$
+%         \State $tmp \gets SubWord(tmp)$
+%         \State $tmp \gets tmp \oplus k_{i-1[0,0][0,1][0,2][0,3]} $
+%         \State $k_{i[[0,0][0,1][0,2][0,3]]} \gets tmp \oplus Rcon(i)$
+%         \For{$j \gets 1\ to\ 3$}
+%             \State $k_{i[[j,0][j,1][j,2][j,3]]} \gets k_{i[[j-1,0][j-1,1][j-1,2][j-1,3]]} \oplus k_{i-1[[j,0][j,1][j,2][j,3]]}$
+%         \EndFor
+%     \EndFor
+%     \State \Return $k_0, k_{1}, k_{2}, k_{3}, k_4$
+%     \end{algorithmic}
+% \end{algorithm}
+
+\subsection{KeySchedule}
+
+\indent KeySchedule nécessite une clé maître de 128 bits. Il génère au total 11 sous-clés pour un AES de 10 tours. Les clés obtenues sont de 128 bits, que ce soit pour l'$AES-128$, l'$AES-192$ et l'$AES-256$. Les sous-clés sont également représentées comme un tableau $4 \times 4$.
+
+KeySchedule utilise 3 principales opérations :
+\begin{itemize}
+\item \texttt{RotWord},
+\item \texttt{SubWord},
+\item \texttt{Rcon}
+\end{itemize}
+Ces opérations s'exécutent sur des colonnes. Pour faciliter la compréhension de l'algorithme, une colonne sera notée $k[i]$ avec $i \in \llbracket 0,3 \rrbracket$
+
+$$ \TABgen{k} $$ 
+$$\longrightarrow k[0], k[1], k[2], k[3] $$
+
+\begin{algorithm}
+    \caption{KeySchedule (ou KeyExpension)}\label{algorithme KeySchedule}
+    \begin{algorithmic}
+    \Require K (clé, 128 bits)
+    \Ensure $ k_0, k_{1}, k_{2}, k_{3}, k_4 $ \Comment{5 clés pour 4 tours}
+    \State $k_0 \gets K$ \Comment{La KeyMaster $\rightarrow$ première sous clé}
+    \For{$i \gets 1\ to\ 4$} \Comment{AES à 4 tours}
+        \State $tmp \gets RotWord(k_{i-1}[3])$
+        \State $tmp \gets SubWord(tmp)$
+        \State $tmp \gets tmp \oplus k_i-1[0] $
+        \State $k_i[[0] \gets tmp \oplus Rcon(i)$
+        \For{$j \gets 1\ to\ 3$}
+            \State $k_i[j] \gets k_i[j-1] \oplus k_i-1[j]$
+        \EndFor
+    \EndFor
+    \State \Return $k_0, k_{1}, k_{2}, k_{3}, k_4$
+    \end{algorithmic}
+\end{algorithm}
+
+\subsubsection{RotWord}
+RotWord est une rotation simple d'octet sur une colonne. C'est une permutation circulaire vers le haut.
+$$ 
+\begin{array}{|c|}\hline
+  a_{0} \\ \hline
+  a_{1} \\ \hline
+  a_{2} \\ \hline
+  a_{3} \\ \hline
+\end{array}  \quad \longrightarrow \quad
+\begin{array}{|c|} \hline
+  a_{1} \\ \hline
+  a_{2} \\ \hline
+  a_{3} \\ \hline
+  a_{0} \\ \hline
+\end{array}$$
+
+\subsubsection{SubWord}
+SubWord utilise la $S$-box présentée plus haut. Chaque octet est substitué à un autre octet. 
+$$
+\begin{array}{|c|}\hline
+  a_{0} \\ \hline
+  a_{1} \\ \hline
+  a_{2} \\ \hline
+  a_{3} \\ \hline
+\end{array}  \quad \longrightarrow \quad
+\begin{array}{|c|} \hline
+  S\text{-box } (a_{0}) \\ \hline
+  S\text{-box } (a_{1}) \\ \hline
+  S\text{-box } (a_{2}) \\ \hline
+  S\text{-box } (a_{3}) \\ \hline
+\end{array}$$
+
+\subsubsection{Rcon}
+Rcon est une constante pour chaque tour. Le but de cette partie est d'éliminer la symétrie dans le cadencement de clé, de faire en sorte que chaque étape du cadencement de clé soit légèrement différente, pour éviter des possibles attaques sur le cadencement de clé. Voici un tableau représentant la constante $rcon[i]$ pour le tour $i$.
+$$
+\begin{array}{|c|c|c|c|c|c|c|c|c|c|c|} \hline
+    i &1&2&3&4&5&6&7&8&9&10 \\ \hline
+rcon[i]&01&02&04&08&10&20&40&80&1\text{B}&36 \\ \hline
+\end{array}
+$$
+
+Les valeurs du tableau sont des octets. Pour le cadencement de clé, qui fait des opérations par colonne, il faut donc une colonne. Pour obtenir la colonne, la première case est celle du tableau ci-dessus. Les cases suivantes sont à zéro.
+
+\noindent \underline{Exemple} : pour le tour 2, la colonne obtenue est 
+$$\begin{array}{|c|} \hline
+    02\\ \hline 00 \\ \hline 00 \\ \hline 00 \\ \hline
+\end{array}$$

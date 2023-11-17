@@ -1,0 +1,55 @@
+% -------------------------------- SECTION 1 ------------------------------------- %
+\subsection{Qu'est-ce que AES ?}
+
+
+\indent L'algorithme de chiffrement AES (Advanced Encryption Standard) est un algorithme de chiffrement par bloc. Il s'agit d'un algorithme à clé symétrique, ce qui signifie que les détenteurs d'une même clé secrète sont en mesure de chiffrer et de déchiffrer des messages en se servant de cette même clé. \\
+Il existe trois sortes d'AES :
+\begin{itemize}
+    \item AES-128 : fonctionnant avec 10 tours et une clé de 128 bits.
+    \item AES-192 : fonctionnant avec 12 tours et une clé de 192 bits.
+    \item AES-256 : fonctionnant avec 14 tours et une clé de 256 bits.
+\end{itemize}
+
+C'est aujourd'hui l'algorithme le plus sûr à utiliser dans le contexte symétrique. Il a été créé par \textit{Joan Daemen} et \textit{Vincent Rijmen}, et a été standardisé en 2001. La meilleure attaque connue à ce jour contre l'AES est la recherche exhaustive, avec une complexité de $2^{128}$ en ce qui concerne l'AES-128 à 10 tours.
+
+\subsection{Langage utilisé}
+Le choix d'un langage de programmation pour l'implémentation d'un chiffrement et d'une attaque est décisif. En effet, ceci va déterminer certains paramètres comme l'efficacité et la simplicité du programme.
+
+\subsubsection{Problématiques}
+Implémenter un système de chiffrement implique de considérer plusieurs paramètres : 
+\begin{itemize}
+	\item Manipuler des messages d'entrées (ici nos blocs d'entrées sont fixés à 128 bits)
+	\item Générer des clés pseudo-aléatoires
+	\item Rapidité de chiffrement/déchiffrement
+	\item Manipuler des bits aisément
+	\item Optimiser la mémoire nécessaire lors de l'exécution
+\end{itemize} 
+
+\subsubsection{Choix final}  
+En prenant en considération les points énoncés ainsi que nos connaissances en matière de langage de programmation, nous avons décidé de programmer en langage C. 
+\\
+En effet, celui-ci nous permet d'avoir une approche de la représentation de l'octet s'approchant de la réalité d'un système de chiffrement comme l'AES. De plus, le mode CTR étant utilisé comme mode de notre AES, nos connaissances dans ce langage nous as permis de paralléliser ce mode d'opération.
+
+\subsection{Mode d'opération}
+Comme énoncé plus haut, le mode d'opération de notre AES que nous avons choisi de mettre en place est le mode CTR. 
+\newline
+Le mode CTR (Counter), a été inventé et proposé par \textit{Whitfield Diffie} et \textit{Martin Hellman} en 1979. Voici les quelques points le définissant :
+\begin{itemize}
+	\item Tout d'abord, un vecteur d'initialisation (IV) de 128 bits est généré aléatoirement.
+	\item Il y a autant de tours de CTR que de multiples de 128 bits du message clair
+	\item Au $1^{er}$ tour, l'algorithme de l'AES prendra en entrée : IV $\oplus$ \textit{counter} et \textit{k} comme clé.
+	\item À chaque chiffrement effectué, \textit{counter} sera modifié par une fonction qui produit une séquence sans répétition. Cependant, un simple incrément de 1 à chaque tour est suffisant et est une technique amplement utilisée : c'est cette solution qui a été retenue.
+	\item Tous les tours de CTR peuvent se dérouler en parallèle et c'est sur ce point que ce mode d'opération est efficace
+	\item Une fois tous les tours effectués, la sortie de CTR va être XORée avec les blocs de message clairs (précédemment complétés par des 0 afin d'avoir des blocs de 8 octets) 
+\end{itemize}
+
+% -------------------------------- SECTION 2 ------------------------------------- %
+\subsection{Attaque par saturation sur l'AES}
+
+\indent Le but de ce projet est de mener une attaque par saturation sur un AES-128 simplifié. Cette version de l'algorithme comporte 4 tours au lieu de 10, afin de faire apparaitre des propriétés qui nous permettent de compromettre la sûreté de l'AES. \\
+\indent L'objectif de cette attaque est de retrouver la clé utilisée pour le chiffrement. Pour ce faire, l'attaquant doit disposer d'au moins $256$ couples clair-chiffré utilisant une même clé : celle que nous voulons retrouver. Ces couples clair-chiffré permettent d'effectuer une cryptanalyse, que nous verrons plus en détail dans une section ultérieure.
+
+% -------------------------------- SECTION 2 ------------------------------------- %
+% \subsection{Choix du langage de programmation}
+
+% \indent Afin d'implémenter cette attaque, nous avons choisi le langage de programmation C. Ce langage nous permet de garder le contrôle de la mémoire utilisée, et nous permet également d'effectuer des optimisations au niveau du code. Le temps d'execution est donc réduit, d'autant plus qu'il s'agit d'un langage compilé. L'utilisation des structures de données et le paradigme procédural se prêtent très bien à ce projet, ainsi que celui des pointeurs, nous permettant de manipuler aisémant des tableaux, des matrices et listes chaînées tout en libérant les espaces mémoires après leur utilisation.

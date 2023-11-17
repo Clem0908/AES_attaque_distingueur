@@ -1,0 +1,17 @@
+\subsection{Type de variable utilisé}
+Afin de manipuler les blocs d'états de l'AES, nous avions besoin de représenter ce qu'est un octet. Un octet faisant 8 bits, une valeur d'octet peut prendre une valeur entière comprise entre 0 et 255 (0x00 et 0xff en hexadécimal). 
+\newline
+Nous aurions pu choisir le type $char$ mais pour des raisons de conversion, le type défini dans le standard C99, $uint8\_t$ nous permet de plus facilement représenter l'octet. Pour plus de lisibilité, ce type a été renommé $byte$.
+
+
+\subsection{Tables S}
+La table S, définie dans $headers/S\_box.h$, est donc un tableau de $byte$ ayant une taille de 16 par 16.
+
+
+\subsection{Interface en ligne de commande}
+Notre programme n'ayant pas d'interface graphique, nous interagissons avec l'utilisateur avec l'entrée standard.
+\newline
+Les commandes disponibles lors de l'exécution sont vérifiées et exécutées à l'aide des fonctions définies dans $headers/CLI.h$.
+
+\subsection{Gestion d'erreurs}
+Des erreurs peuvent subvenir lors de l'exécution par une mauvaise entrée utilisateur ou encore l'allocation de mémoire. Ces erreurs sont ainsi gérées par les fonctions définies dans $headers/Errors.h$.
